@@ -1,15 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
 from typing import List
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -18,10 +17,10 @@ env = gym.make('CartPole-v1')
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -43,6 +42,7 @@ memory = []
 size_replay_memory = 50000
 batch_size = 64
 
+
 class DQN:
 
     def __init__(self, session: tf.Session, state_size: int, action_size: int, name: str="main") -> None:
@@ -50,23 +50,25 @@ class DQN:
         self.state_size = state_size
         self.action_size = action_size
         self.net_name = name
-
+        
         self.build_model()
 
+    # approximate Q function using Neural Network
+    # state is input and Q Value of each action is output of network
     def build_model(self, H_SIZE_01=200,Alpha=0.001) -> None:
         with tf.variable_scope(self.net_name):
             self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
             self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
             net_0 = self._X
 
-            net_1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
-            net_16 = tf.layers.dense(net_1, self.action_size)
-            self._Qpred = net_16
+            h_fc1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
+            output = tf.layers.dense(h_fc1, self.action_size)
+            self._Qpred = output
 
-            self._LossValue = tf.losses.mean_squared_error(self._Y, self._Qpred)
+            self.Loss = tf.losses.mean_squared_error(self._Y, self._Qpred)
 
             optimizer = tf.train.AdamOptimizer(learning_rate=Alpha)
-            self._train = optimizer.minimize(self._LossValue)
+            self._train = optimizer.minimize(self.Loss)
 
     def predict(self, state: np.ndarray) -> np.ndarray:
         x = np.reshape(state, [-1, self.state_size])
@@ -77,7 +79,7 @@ class DQN:
             self._X: x_stack,
             self._Y: y_stack
         }
-        return self.session.run([self._LossValue, self._train], feed)
+        return self.session.run([self.Loss, self._train], feed)
 
 def Copy_Weights(*, dest_scope_name: str, src_scope_name: str) -> List[tf.Operation]:
     op_holder = []
@@ -139,14 +141,14 @@ def main():
         epsilon = epsilon_max
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score < 495:
+        while time.time() - start_time < 10*60 and avg_score < 490:
             
             state = env.reset()
             score = 0
             done = False
             ep_step = 0
             
-            while not done and ep_step < 1000 :
+            while not done and ep_step < 500 :
 
                 if len(memory) < size_replay_memory:
                     progress = "Exploration"            
@@ -186,7 +188,7 @@ def main():
                 state = next_state
                 score = ep_step
 
-                if done or ep_step == 1000:
+                if done or ep_step == 500:
                     if progress == "Training":
                         episode += 1
                         scores.append(score)
@@ -201,7 +203,7 @@ def main():
         print("\n Model saved in file: %s" % save_path)
 
         pylab.plot(episodes, scores, 'b')
-        pylab.savefig(graph_path + "/cartpole_NIPS2013.png")
+        pylab.savefig(graph_path + "/cartpole_doubledqn.png")
 
         e = int(time.time() - start_time)
         print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
@@ -215,7 +217,7 @@ def main():
             done = False
             ep_step = 0
             
-            while not done and ep_step < 1000:
+            while not done and ep_step < 500:
                 env.render()
                 ep_step += 1
                 q_value = agent.predict(state)
@@ -224,7 +226,7 @@ def main():
                 state = next_state
                 score = ep_step
                 
-                if done or ep_step == 1000:
+                if done or ep_step == 500:
                     episode += 1
                     scores.append(score)
                     print("episode : {:>5d} / reward : {:>5d} / avg reward : {:>5.2f}".format(episode, score, np.mean(scores)))

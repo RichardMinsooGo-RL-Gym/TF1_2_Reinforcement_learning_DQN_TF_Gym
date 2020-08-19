@@ -1,14 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
-import time
+
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -17,10 +17,10 @@ env = gym.make('CartPole-v1')
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -42,7 +42,9 @@ memory = []
 size_replay_memory = 50000
 batch_size = 64
 
+
 class DQN:
+
     def __init__(self, session: tf.Session, state_size: int, action_size: int, name: str="main") -> None:
         self.session = session
         self.state_size = state_size
@@ -114,14 +116,14 @@ def main():
         epsilon = epsilon_max
         start_time = time.time()
 
-        while time.time() - start_time < 30*60 and avg_score < 495:
+        while time.time() - start_time < 10*60 and avg_score < 490:
             
             state = env.reset()
             score = 0
             done = False
             ep_step = 0
             
-            while not done and ep_step < 1000 :
+            while not done and ep_step < 500:
 
                 if len(memory) < size_replay_memory:
                     progress = "Exploration"            
@@ -158,7 +160,7 @@ def main():
                 state = next_state
                 score = ep_step
 
-                if done or ep_step == 1000:
+                if done or ep_step == 500:
                     if progress == "Training":
                         episode += 1
                         scores.append(score)
@@ -187,7 +189,7 @@ def main():
             done = False
             ep_step = 0
             
-            while not done and ep_step < 1000:
+            while not done and ep_step < 500:
                 env.render()
                 ep_step += 1
                 q_value = agent.predict(state)
@@ -196,7 +198,7 @@ def main():
                 state = next_state
                 score = ep_step
                 
-                if done or ep_step == 1000:
+                if done or ep_step == 500:
                     episode += 1
                     scores.append(score)
                     print("episode : {:>5d} / reward : {:>5d} / avg reward : {:>5.2f}".format(episode, score, np.mean(scores)))
