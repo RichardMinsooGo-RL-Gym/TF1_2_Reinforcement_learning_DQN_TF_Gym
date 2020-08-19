@@ -1,14 +1,13 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random as ran
+import numpy as np
+import time, datetime
 from collections import deque
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -17,10 +16,10 @@ env = gym.make('CartPole-v1')
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -44,7 +43,7 @@ H_SIZE_16_state = action_size
 H_SIZE_16_action = action_size
 
 memory = []
-size_replay_memory = 5000
+size_replay_memory = 50000
 batch_size = 64
 
 X = tf.placeholder(dtype=tf.float32, shape=(None, state_size), name="input_X")
@@ -139,14 +138,14 @@ with tf.Session() as sess:
     epsilon = epsilon_max
     start_time = time.time()
     
-    while time.time() - start_time < 120*60 and avg_score < 199: 
+    while time.time() - start_time < 10*60 and avg_score < 490: 
 
         state = env.reset()
         score = 0
         done = False
         ep_step = 0
 
-        while not done and ep_step < 1000 :
+        while not done and ep_step < 500 :
 
             if len(memory) < size_replay_memory:
                 progress = "Exploration"            
@@ -208,7 +207,7 @@ with tf.Session() as sess:
                 sess.run(B16_t_state.assign(B16_m_state))
                 sess.run(B16_t_action.assign(B16_m_action))            
 
-            if done or ep_step == 1000:
+            if done or ep_step == 500:
                 if progress == "Training":
                     episode += 1
                     scores.append(ep_step)
@@ -223,7 +222,7 @@ with tf.Session() as sess:
     print("\n Model saved in file: %s" % save_path)
 
     pylab.plot(episodes, scores, 'b')
-    pylab.savefig(graph_path + "/cartpole_NIPS2013.png")
+    pylab.savefig(graph_path + "/cartpole_duelingdqn.png")
 
     e = int(time.time() - start_time)
     print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
@@ -244,7 +243,7 @@ with tf.Session() as sess:
         done = False
         ep_step = 0
         
-        while not done and ep_step < 1000:
+        while not done and ep_step < 500:
             # Plotting
             env.render()
             ep_step += 1
@@ -254,7 +253,7 @@ with tf.Session() as sess:
             next_state, reward, done, _ = env.step(action)
             state = next_state
             score = ep_step
-            if done or ep_step == 1000:
+            if done or ep_step == 500:
                 episode += 1
                 scores.append(score)
                 print("episode : {:>5d} / reward : {:>5d} / avg reward : {:>5.2f}".format(episode, score, np.mean(scores)))
