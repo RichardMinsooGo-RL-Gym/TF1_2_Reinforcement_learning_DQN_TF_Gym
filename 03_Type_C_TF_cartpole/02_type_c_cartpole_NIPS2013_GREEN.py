@@ -1,15 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
 
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -18,10 +17,10 @@ env = gym.make('CartPole-v1')
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -37,6 +36,7 @@ epsilon_min = 0.0001
 epsilon_decay = 0.0001
 
 hidden1 = 256
+update_cycle = 10
 
 memory = []
 size_replay_memory = 50000
@@ -53,7 +53,9 @@ class DQN:
         
         self.build_model()
 
-    def build_model(self, H_SIZE_01=200,Alpha=0.001) -> None:
+    # approximate Q function using Neural Network
+    # state is input and Q Value of each action is output of network
+    def build_model(self, H_SIZE_01 = 256, Alpha=0.001) -> None:
         with tf.variable_scope(self.net_name):
             self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
             self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
@@ -90,6 +92,7 @@ def train_model(agent: DQN, minibatch: list) -> float:
     q_value = agent.predict(states)
 
     y_array = rewards + discount_factor * np.max(agent.predict(next_states), axis=1) * ~dones
+
     q_value[np.arange(len(X_batch)), actions] = y_array
 
     Loss, _ = agent.update(X_batch, q_value)
@@ -113,14 +116,14 @@ def main():
         epsilon = epsilon_max
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score < 495:
+        while time.time() - start_time < 10*60 and avg_score < 490:
             
             state = env.reset()
             score = 0
             done = False
             ep_step = 0
             
-            while not done and ep_step < 1000 :
+            while not done and ep_step < 500 :
 
                 if len(memory) < size_replay_memory:
                     progress = "Exploration"            
@@ -157,7 +160,7 @@ def main():
                 state = next_state
                 score = ep_step
 
-                if done or ep_step == 1000:
+                if done or ep_step == 500:
                     if progress == "Training":
                         episode += 1
                         scores.append(score)
@@ -186,7 +189,7 @@ def main():
             done = False
             ep_step = 0
             
-            while not done and ep_step < 1000:
+            while not done and ep_step < 500:
                 env.render()
                 ep_step += 1
                 q_value = agent.predict(state)
@@ -195,10 +198,10 @@ def main():
                 state = next_state
                 score = ep_step
                 
-                if done or ep_step == 1000:
+                if done or ep_step == 500:
                     episode += 1
                     scores.append(score)
-                    print("episode : {:>5d} / reward : {:>5d} / avg reward : {:>5.1f}".format(episode, score, np.mean(scores)))
+                    print("episode : {:>5d} / reward : {:>5d} / avg reward : {:>5.2f}".format(episode, score, np.mean(scores)))
 
 if __name__ == "__main__":
     main()
