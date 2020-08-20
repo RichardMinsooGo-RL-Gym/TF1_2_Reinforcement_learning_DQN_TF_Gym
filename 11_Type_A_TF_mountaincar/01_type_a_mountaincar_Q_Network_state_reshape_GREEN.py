@@ -1,12 +1,11 @@
 import tensorflow as tf
-import gym
 import numpy as np
-import time
+import time, datetime
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -17,10 +16,10 @@ env = env.unwrapped
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -62,20 +61,20 @@ with tf.Session() as sess:
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
     sess.run(init)
-    
+
     avg_score = 10000
     episode = 0
     episodes, scores = [], []
     epsilon = epsilon_max
     start_time = time.time()
     
-    while time.time() - start_time < 30*60  and avg_score > 200:
-        
+    while time.time() - start_time < 10*60  and avg_score > 200: 
+
         state = env.reset()
         score = 0
         done = False
         ep_step = 0
-        
+
         while not done and ep_step < 10000 :
             
             #env.render()
@@ -102,25 +101,25 @@ with tf.Session() as sess:
                 epsilon -= epsilon_decay
             else:
                 epsilon = epsilon_min
-            
+
             state = next_state
-            
+
             if done or ep_step == 10000:
                 episode += 1
                 scores.append(ep_step)
                 episodes.append(episode)
                 avg_score = np.mean(scores[-min(30, len(scores)):])
-                
+
                 print("episode {:>5d} / score:{:>5d} / recent 30 game avg:{:>5.1f} / epsilon :{:>1.5f}"
                           .format(episode, ep_step, avg_score, epsilon))            
                 break
 
     save_path = saver.save(sess, model_path + "/model.ckpt")
     print("\n Model saved in file: %s" % save_path)
-    
+
     pylab.plot(episodes, scores, 'b')
     pylab.savefig(graph_path + "/mountaincar_Q_net.png")
-    
+
     e = int(time.time() - start_time)
     print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
 
@@ -137,7 +136,6 @@ with tf.Session() as sess:
     while episode < 20:
         
         state = env.reset()
-        score = 0
         done = False
         ep_step = 0
         
@@ -150,9 +148,8 @@ with tf.Session() as sess:
             action = np.argmax(q_value)
             next_state, reward, done, _ = env.step(action)
             state = next_state
-            if done:
+            score = ep_step
+            if done or ep_step == 1000:
                 episode += 1
-            
-        scores.append(ep_step)
-        print("episode : {:>5} / score : {:>5} / averge score : {:>5.2f}".format(episode, ep_step,
-                                                                        np.mean(scores)))
+                scores.append(score)
+                print("episode : {:>5d} / reward : {:>5d} / avg reward : {:>5.2f}".format(episode, score, np.mean(scores)))
