@@ -1,12 +1,11 @@
 import tensorflow as tf
-import gym
 import numpy as np
-import time
+import time, datetime
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -20,10 +19,10 @@ env = env.unwrapped
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -105,15 +104,15 @@ with tf.Session() as sess:
                 epsilon -= epsilon_decay
             else:
                 epsilon = epsilon_min
-            
+
             state = next_state
-            
+
             if done or ep_step == 10000:
                 episode += 1
                 scores.append(ep_step)
                 episodes.append(episode)
                 avg_score = np.mean(scores[-min(30, len(scores)):])
-                
+
                 print("episode {:>5d} / score:{:>5d} / recent 30 game avg:{:>5.1f} / epsilon :{:>1.5f}"
                           .format(episode, ep_step, avg_score, epsilon))            
                 break
@@ -122,8 +121,8 @@ with tf.Session() as sess:
     print("\n Model saved in file: %s" % save_path)
 
     pylab.plot(episodes, scores, 'b')
-    pylab.savefig(graph_path + "/mountaincar_Q_net.png")
-    
+    pylab.savefig(graph_path + "/acrobot_Q_net.png")
+
     e = int(time.time() - start_time)
     print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
 
@@ -132,7 +131,7 @@ with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
 
     saver.restore(sess, model_path+ "/model.ckpt")
-    print("Play Mountain Car!")
+    print("Play Acrobot!")
     
     episode = 0
     scores = []
