@@ -1,14 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
-import time
+
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -19,10 +19,10 @@ env.seed(1)
 state_size = env.observation_space.shape[0]
 action_size = 25
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -55,21 +55,21 @@ class DQN:
         self.net_name = name
         self.model = self.build_model()
         
-    # def build_model(self, H_SIZE_01 = 256, H_SIZE_02 = 256, H_SIZE_03 = 256, self.learning_rate=0.001) -> None:
-    def build_model(self):
+
+    def build_model(self, H_SIZE_01 = 128, H_SIZE_02 = 128, Alpha=0.001) -> None:
         with tf.variable_scope(self.net_name):
             self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
             self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
             net_0 = self._X
 
-            net = tf.layers.dense(net_0, self.hidden1, activation=tf.nn.relu)
-            # net = tf.layers.dense(net, self.hidden2, activation=tf.nn.relu)
-            net_16 = tf.layers.dense(net, self.action_size)
-            self._Qpred = net_16
+            h_fc1 = tf.layers.dense(net_0, self.hidden1, activation=tf.nn.relu)
+            h_fc2 = tf.layers.dense(h_fc1, self.hidden2, activation=tf.nn.relu)
+            output = tf.layers.dense(h_fc2, self.action_size)
+            self._Qpred = output
 
             self.Loss = tf.losses.mean_squared_error(self._Y, self._Qpred)
 
-            optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
+            optimizer = tf.train.AdamOptimizer(learning_rate=Alpha)
             self._train = optimizer.minimize(self.Loss)
 
     def predict(self, state: np.ndarray) -> np.ndarray:
@@ -131,14 +131,14 @@ def main():
         episodes, scores = [], []
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score < -15:
+        while time.time() - start_time < 10*60 and avg_score < -15:
             state = env.reset()
             score = 0
             done = False
             ep_step = 0
             rewards = 0
             state = np.reshape(state, [1, state_size])
-            while not done and ep_step < 200 :
+            while not done and ep_step < 200:
 
                 if len(agent.memory) < agent.size_replay_memory:
                     progress = "Exploration"            
