@@ -1,16 +1,15 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
 import Duelingdqn
 from typing import List
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -24,10 +23,10 @@ env = env.unwrapped
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -81,7 +80,9 @@ def train_model(agent, target_agent, minibatch):
         y_stack = np.vstack([y_stack, Q_Global])
         x_stack = np.vstack([x_stack, state])
     
-    return agent.update(x_stack, y_stack)
+    #Train our network using target and predicted Q values on each episode
+    return agent.update(x_stack, y_stack)    
+    
 
 def main():
 
@@ -106,7 +107,7 @@ def main():
         epsilon = epsilon_max
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score > 200:
+        while time.time() - start_time < 10*60 and avg_score > 200:
             
             state = env.reset()
             score = 0
@@ -129,7 +130,7 @@ def main():
                     action = np.argmax(agent.predict(state))
 
                 next_state, reward, done, _ = env.step(action)
-                
+
                 memory.append((state, action, reward, next_state, done))
 
                 if len(memory) > size_replay_memory:
@@ -165,7 +166,7 @@ def main():
         print("\n Model saved in file: %s" % save_path)
 
         pylab.plot(episodes, scores, 'b')
-        pylab.savefig(graph_path + "/cartpole_NIPS2013.png")
+        pylab.savefig(graph_path + "/mountaincar_duelingdqn.png")
 
         e = int(time.time() - start_time)
         print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
