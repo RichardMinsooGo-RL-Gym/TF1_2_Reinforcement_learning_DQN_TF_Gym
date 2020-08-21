@@ -1,16 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
-
 from typing import List
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -21,10 +19,10 @@ env.seed(1)
 state_size = env.observation_space.shape[0]
 action_size = 25
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -57,20 +55,22 @@ class DQN:
         
         self.build_model()
 
+    # approximate Q function using Neural Network
+    # state is input and Q Value of each action is output of network
     def build_model(self, H_SIZE_01=200,Alpha=0.001) -> None:
         with tf.variable_scope(self.net_name):
             self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
             self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
             net_0 = self._X
 
-            net_1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
-            net_16 = tf.layers.dense(net_1, self.action_size)
-            self._Qpred = net_16
+            h_fc1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
+            output = tf.layers.dense(h_fc1, self.action_size)
+            self._Qpred = output
 
-            self._LossValue = tf.losses.mean_squared_error(self._Y, self._Qpred)
+            self.Loss = tf.losses.mean_squared_error(self._Y, self._Qpred)
 
             optimizer = tf.train.AdamOptimizer(learning_rate=Alpha)
-            self._train = optimizer.minimize(self._LossValue)
+            self._train = optimizer.minimize(self.Loss)
 
     def predict(self, state: np.ndarray) -> np.ndarray:
         x = np.reshape(state, [-1, self.state_size])
@@ -81,7 +81,7 @@ class DQN:
             self._X: x_stack,
             self._Y: y_stack
         }
-        return self.session.run([self._LossValue, self._train], feed)
+        return self.session.run([self.Loss, self._train], feed)
 
 def Copy_Weights(*, dest_scope_name: str, src_scope_name: str) -> List[tf.Operation]:
     op_holder = []
@@ -140,7 +140,7 @@ def main():
         epsilon = epsilon_max
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score < -15:
+        while time.time() - start_time < 10*60 and avg_score < -15:
             
             state = env.reset()
             score = 0
