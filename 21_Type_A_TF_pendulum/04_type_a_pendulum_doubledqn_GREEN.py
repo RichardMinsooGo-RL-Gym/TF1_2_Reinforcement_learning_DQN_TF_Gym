@@ -1,14 +1,13 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random as ran
+import numpy as np
+import time, datetime
 from collections import deque
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -19,10 +18,10 @@ env.seed(1)
 state_size = env.observation_space.shape[0]
 action_size = 25
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -41,7 +40,7 @@ hidden1 = 256
 target_update_cycle = 200
 
 memory = []
-size_replay_memory = 5000
+size_replay_memory = 50000
 batch_size = 64
 
 X = tf.placeholder(dtype=tf.float32, shape=(None, state_size), name="input_X")
@@ -82,7 +81,6 @@ with tf.Session() as sess:
     sess.run(w_fc1_tgt.assign(w_fc1))
     sess.run(w_output_tgt.assign(w_output))
     sess.run(b_fc1_tgt.assign(b_fc1))
-
 
     avg_score = -120
     episode = 0
@@ -172,7 +170,7 @@ with tf.Session() as sess:
     print("\n Model saved in file: %s" % save_path)
 
     pylab.plot(episodes, scores, 'b')
-    pylab.savefig(graph_path + "/pendulum_Nature2015.png")
+    pylab.savefig(graph_path + "/pendulum_doubeldqn.png")
 
     e = int(time.time() - start_time)
     print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
