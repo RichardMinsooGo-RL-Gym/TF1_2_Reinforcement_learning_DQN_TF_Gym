@@ -1,15 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
 from typing import List
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -20,10 +19,10 @@ env = env.unwrapped
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -67,7 +66,6 @@ class DQN:
             net_0 = self._X
 
             net = tf.layers.dense(net_0, self.hidden1, activation=tf.nn.relu)
-            # net = tf.layers.dense(net, self.hidden2, activation=tf.nn.relu)
             net_16 = tf.layers.dense(net, self.action_size)
             self._Qpred = net_16
 
@@ -122,7 +120,7 @@ def train_model(agent, target_agent):
         return
 
     minibatch = random.sample(agent.memory, agent.batch_size)
-    for state, action, reward, next_state, done in minibatch:
+    for state,action,reward,next_state, done in minibatch:
         q_update = reward
         if not done:
             tgt_q_value_next = target_agent.predict(next_state)[0]
@@ -136,7 +134,6 @@ def train_model(agent, target_agent):
 
     if agent.epsilon > agent.epsilon_min:
         agent.epsilon *= agent.epsilon_decay
-
 
 def main():
 
@@ -159,7 +156,8 @@ def main():
         episodes, scores = [], []
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score > 200:
+        while time.time() - start_time < 10*60 and avg_score > 200:
+            
             state = env.reset()
             score = 0
             done = False
@@ -209,7 +207,7 @@ def main():
         print("\n Model saved in file: %s" % save_path)
 
         pylab.plot(episodes, scores, 'b')
-        pylab.savefig(graph_path + "/mountaincar_NIPS2013.png")
+        pylab.savefig(graph_path + "/mountaincar_doubledqn.png")
 
         e = int(time.time() - start_time)
         print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))

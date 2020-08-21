@@ -1,14 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
-import time
+
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -19,10 +19,10 @@ env = env.unwrapped
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -86,7 +86,9 @@ class DQN:
     def get_action(self,state):
         #Exploration vs Exploitation
         if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
+            # action = random.randrange(self.action_size)
+            action = np.random.randint(0, self.action_size)
+            return action
         
         q_values  = self.predict(state)
         
@@ -129,7 +131,8 @@ def main():
         episodes, scores = [], []
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score > 200:
+        while time.time() - start_time < 10*60 and avg_score > 200:
+            
             state = env.reset()
             score = 0
             done = False
