@@ -1,16 +1,15 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
 import dqn
 from typing import List
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -21,10 +20,10 @@ env.seed(1)
 state_size = env.observation_space.shape[0]
 action_size = 25
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -103,7 +102,7 @@ def main():
         epsilon = epsilon_max
         start_time = time.time()
 
-        while time.time() - start_time < 5*60 and avg_score < -15:
+        while time.time() - start_time < 10*60 and avg_score < -15:
             
             state = env.reset()
             score = 0
