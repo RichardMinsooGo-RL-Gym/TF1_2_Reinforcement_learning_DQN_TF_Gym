@@ -42,6 +42,7 @@ epsilon_min = 0.0001
 epsilon_decay = 0.0001
 
 hidden1 = 256
+update_cycle = 10
 
 memory = []
 size_replay_memory = 50000
@@ -104,6 +105,7 @@ def main():
                     action = np.argmax(agent.predict(state))
 
                 next_state, reward, done, _ = env.step(action)
+
                 memory.append((state, action, reward, next_state, done))
 
                 if len(memory) > size_replay_memory:
@@ -136,7 +138,7 @@ def main():
         print("\n Model saved in file: %s" % save_path)
 
         pylab.plot(episodes, scores, 'b')
-        pylab.savefig(graph_path + "/cartpole_NIPS2013.png")
+        pylab.savefig(graph_path + "/acrobot_NIPS2013.png")
 
         e = int(time.time() - start_time)
         print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
