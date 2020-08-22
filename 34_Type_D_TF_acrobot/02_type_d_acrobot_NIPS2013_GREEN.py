@@ -1,15 +1,14 @@
 import tensorflow as tf
-import gym
-import numpy as np
 import random
+import numpy as np
+import time, datetime
 from collections import deque
 import dqn
-import time
+import gym
 import pylab
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
@@ -23,10 +22,10 @@ env = env.unwrapped
 state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
-file_name =  sys.argv[0][:-3]
+game_name =  sys.argv[0][:-3]
 
-model_path = "save_model/" + file_name
-graph_path = "save_graph/" + file_name
+model_path = "save_model/" + game_name
+graph_path = "save_graph/" + game_name
 
 # Make folder for save data
 if not os.path.exists(model_path):
@@ -42,6 +41,7 @@ epsilon_min = 0.0001
 epsilon_decay = 0.0001
 
 hidden1 = 256
+update_cycle = 10
 
 memory = []
 size_replay_memory = 50000
@@ -107,6 +107,7 @@ def main():
                     action = np.argmax(agent.predict(state))
 
                 next_state, reward, done, _ = env.step(action)
+
                 memory.append((state, action, reward, next_state, done))
 
                 if len(memory) > size_replay_memory:
@@ -139,7 +140,7 @@ def main():
         print("\n Model saved in file: %s" % save_path)
 
         pylab.plot(episodes, scores, 'b')
-        pylab.savefig(graph_path + "/pendulum_NIPS2013.png")
+        pylab.savefig(graph_path + "/acrobot_NIPS2013.png")
 
         e = int(time.time() - start_time)
         print(' Elasped time :{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
