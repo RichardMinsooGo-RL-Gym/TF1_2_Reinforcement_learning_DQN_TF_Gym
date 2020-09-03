@@ -3,7 +3,7 @@ import random
 import numpy as np
 import time, datetime
 from collections import deque
-
+import dqn
 import gym
 import pylab
 import sys
@@ -44,46 +44,7 @@ memory = []
 size_replay_memory = 50000
 batch_size = 64
 
-
-class DQN:
-
-    def __init__(self, session: tf.Session, state_size: int, action_size: int, name: str="main") -> None:
-        self.session = session
-        self.state_size = state_size
-        self.action_size = action_size
-        self.net_name = name
-        
-        self.build_model()
-
-    # approximate Q function using Neural Network
-    # state is input and Q Value of each action is output of network
-    def build_model(self, H_SIZE_01 = 256, Alpha=0.001) -> None:
-        with tf.variable_scope(self.net_name):
-            self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
-            self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
-            net_0 = self._X
-
-            h_fc1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
-            output = tf.layers.dense(h_fc1, self.action_size)
-            self._Qpred = output
-
-            self.Loss = tf.losses.mean_squared_error(self._Y, self._Qpred)
-
-            optimizer = tf.train.AdamOptimizer(learning_rate=Alpha)
-            self._train = optimizer.minimize(self.Loss)
-
-    def predict(self, state: np.ndarray) -> np.ndarray:
-        x = np.reshape(state, [-1, self.state_size])
-        return self.session.run(self._Qpred, feed_dict={self._X: x})
-
-    def update(self, x_stack: np.ndarray, y_stack: np.ndarray) -> list:
-        feed = {
-            self._X: x_stack,
-            self._Y: y_stack
-        }
-        return self.session.run([self.Loss, self._train], feed)
-
-def train_model(agent: DQN, minibatch: list) -> float:
+def train_model(agent: dqn.DQN, minibatch: list) -> float:
     states      = np.vstack([batch[0] for batch in minibatch])
     actions     = np.array( [batch[1] for batch in minibatch])
     rewards     = np.array( [batch[2] for batch in minibatch])
@@ -107,7 +68,7 @@ def main():
     progress = " "
 
     with tf.Session() as sess:
-        agent = DQN(sess, state_size, action_size, name="main")
+        agent = dqn.DQN(sess, state_size, action_size, name="main")
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
         sess.run(init)
@@ -124,7 +85,7 @@ def main():
             score = 0
             done = False
             ep_step = 0
-            rewards = 0
+            score = 0
             
             while not done and ep_step < 200:   
 
@@ -149,7 +110,7 @@ def main():
                 next_state, reward, done, _ = env.step(np.array([f_action]))
                 
                 reward /= 10
-                rewards += reward                
+                score += reward                
                 
                 memory.append((state, action, reward, next_state, done))
 
@@ -166,7 +127,6 @@ def main():
                         epsilon = epsilon_min
 
                 state = next_state
-                score = rewards
 
                 if done or ep_step == 200:
                     if progress == "Training":
@@ -196,7 +156,7 @@ def main():
             state = env.reset()
             done = False
             ep_step = 0
-            rewards = 0
+            score = 0
             
             while not done and ep_step < 200:
                 env.render()
@@ -209,9 +169,8 @@ def main():
                 next_state, reward, done, _ = env.step(np.array([f_action]))
                 
                 reward /= 10
-                rewards += reward
+                score += reward
                 state = next_state
-                score = rewards
                 
                 if done or ep_step == 200:
                     episode += 1
