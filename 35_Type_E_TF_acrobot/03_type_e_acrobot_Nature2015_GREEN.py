@@ -3,6 +3,7 @@ import random
 import numpy as np
 import time, datetime
 from collections import deque
+import dqn
 from typing import List
 import gym
 import pylab
@@ -48,44 +49,6 @@ size_replay_memory = 50000
 batch_size = 64
 
 
-class DQN:
-
-    def __init__(self, session: tf.Session, state_size: int, action_size: int, name: str="main") -> None:
-        self.session = session
-        self.state_size = state_size
-        self.action_size = action_size
-        self.net_name = name
-        
-        self.build_model()
-
-    # approximate Q function using Neural Network
-    # state is input and Q Value of each action is output of network
-    def build_model(self, H_SIZE_01=200,Alpha=0.001) -> None:
-        with tf.variable_scope(self.net_name):
-            self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
-            self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
-            net_0 = self._X
-
-            h_fc1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
-            output = tf.layers.dense(h_fc1, self.action_size)
-            self._Qpred = output
-
-            self.Loss = tf.losses.mean_squared_error(self._Y, self._Qpred)
-
-            optimizer = tf.train.AdamOptimizer(learning_rate=Alpha)
-            self._train = optimizer.minimize(self.Loss)
-
-    def predict(self, state: np.ndarray) -> np.ndarray:
-        x = np.reshape(state, [-1, self.state_size])
-        return self.session.run(self._Qpred, feed_dict={self._X: x})
-
-    def update(self, x_stack: np.ndarray, y_stack: np.ndarray) -> list:
-        feed = {
-            self._X: x_stack,
-            self._Y: y_stack
-        }
-        return self.session.run([self.Loss, self._train], feed)
-
 def Copy_Weights(*, dest_scope_name: str, src_scope_name: str) -> List[tf.Operation]:
     op_holder = []
 
@@ -117,7 +80,9 @@ def train_model(agent, target_agent, minibatch):
         y_stack = np.vstack([y_stack, Q_Global])
         x_stack = np.vstack([x_stack, state])
     
-    return agent.update(x_stack, y_stack)
+    #Train our network using target and predicted Q values on each episode
+    return agent.update(x_stack, y_stack)    
+    
 
 def main():
 
@@ -125,8 +90,8 @@ def main():
     progress = " "
 
     with tf.Session() as sess:
-        agent = DQN(sess, state_size, action_size, name="main")
-        target_agent = DQN(sess, state_size, action_size, name="target")
+        agent = dqn.DQN(sess, state_size, action_size, name="main")
+        target_agent = dqn.DQN(sess, state_size, action_size, name="target")
         
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
@@ -165,7 +130,7 @@ def main():
                     action = np.argmax(agent.predict(state))
 
                 next_state, reward, done, _ = env.step(action)
-                
+
                 memory.append((state, action, reward, next_state, done))
 
                 if len(memory) > size_replay_memory:

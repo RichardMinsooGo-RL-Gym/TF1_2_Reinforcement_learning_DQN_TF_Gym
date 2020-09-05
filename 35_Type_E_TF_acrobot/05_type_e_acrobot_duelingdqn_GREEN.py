@@ -3,6 +3,7 @@ import random
 import numpy as np
 import time, datetime
 from collections import deque
+import Duelingdqn
 from typing import List
 import gym
 import pylab
@@ -47,54 +48,6 @@ memory = []
 size_replay_memory = 50000
 batch_size = 64
 
-class DuelingDQN:
-
-    def __init__(self, session: tf.Session, state_size: int, action_size: int, name: str="main") -> None:
-        self.session = session
-        self.state_size = state_size
-        self.action_size = action_size
-        self.net_name = name
-        
-        self.build_model()
-
-    def build_model(self, H_SIZE_01=200, H_SIZE_15_state = 200, H_SIZE_15_action = 200, Alpha=0.001) -> None:
-        with tf.variable_scope(self.net_name):
-            self._X = tf.placeholder(dtype=tf.float32, shape= [None, self.state_size], name="input_X")
-            self._Y = tf.placeholder(dtype=tf.float32, shape= [None, self.action_size], name="output_Y")
-            self.dropout = tf.placeholder(dtype=tf.float32)
-            H_SIZE_16_state = self.action_size
-            H_SIZE_16_action = self.action_size
-            
-            net_0 = self._X
-
-            h_fc1 = tf.layers.dense(net_0, H_SIZE_01, activation=tf.nn.relu)
-            h_fc15_state = tf.layers.dense(h_fc1, H_SIZE_15_state, activation=tf.nn.relu)
-            h_fc15_action = tf.layers.dense(h_fc1, H_SIZE_15_action, activation=tf.nn.relu)
-            
-            h_fc16_state = tf.layers.dense(h_fc15_state, H_SIZE_16_state)
-            h_fc16_action = tf.layers.dense(h_fc15_action, H_SIZE_16_action)
-            
-            net16_advantage = tf.subtract(h_fc16_action, tf.reduce_mean(h_fc16_action))
-            
-            output = tf.add(h_fc16_state, net16_advantage)
-            
-            self._Qpred = output
-
-            self.Loss = tf.losses.mean_squared_error(self._Y, self._Qpred)
-
-            optimizer = tf.train.AdamOptimizer(learning_rate=Alpha)
-            self._train = optimizer.minimize(self.Loss)
-
-    def predict(self, state: np.ndarray) -> np.ndarray:
-        x = np.reshape(state, [-1, self.state_size])
-        return self.session.run(self._Qpred, feed_dict={self._X: x})
-
-    def update(self, x_stack: np.ndarray, y_stack: np.ndarray) -> list:
-        feed = {
-            self._X: x_stack,
-            self._Y: y_stack
-        }
-        return self.session.run([self.Loss, self._train], feed)
 
 def Copy_Weights(*, dest_scope_name: str, src_scope_name: str) -> List[tf.Operation]:
     op_holder = []
@@ -122,13 +75,14 @@ def train_model(agent, target_agent, minibatch):
             
         else:
             #Obtain the Q' values by feeding the new state through our network
-            Q_target = target_agent.predict(next_state)
-            Q_Global[0,action] = reward + discount_factor * np.max(Q_target)
+            Q_Global[0,action] = reward + discount_factor * np.max(target_agent.predict(next_state))
 
         y_stack = np.vstack([y_stack, Q_Global])
         x_stack = np.vstack([x_stack, state])
     
-    return agent.update(x_stack, y_stack)
+    #Train our network using target and predicted Q values on each episode
+    return agent.update(x_stack, y_stack)    
+    
 
 def main():
 
@@ -136,8 +90,8 @@ def main():
     progress = " "
 
     with tf.Session() as sess:
-        agent = DuelingDQN(sess, state_size, action_size, name="main")
-        target_agent = DuelingDQN(sess, state_size, action_size, name="target")
+        agent = Duelingdqn.DQN(sess, state_size, action_size, name="main")
+        target_agent = Duelingdqn.DQN(sess, state_size, action_size, name="target")
         
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
@@ -176,7 +130,7 @@ def main():
                     action = np.argmax(agent.predict(state))
 
                 next_state, reward, done, _ = env.step(action)
-                
+
                 memory.append((state, action, reward, next_state, done))
 
                 if len(memory) > size_replay_memory:
