@@ -48,7 +48,7 @@ H_SIZE_16_state = action_size
 H_SIZE_16_action = action_size
 
 memory = []
-size_replay_memory = 50000
+size_replay_memory = 5000
 batch_size = 64
 
 X = tf.placeholder(dtype=tf.float32, shape=(None, state_size), name="input_X")
@@ -136,6 +136,7 @@ with tf.Session() as sess:
     sess.run(B15_t_action.assign(B15_m_action))
     sess.run(B16_t_state.assign(B16_m_state))
     sess.run(B16_t_action.assign(B16_m_action))
+    
     avg_score = 10000
     episode = 0
     episodes, scores = [], []
@@ -169,26 +170,24 @@ with tf.Session() as sess:
 
             next_state, reward, done, _ = env.step(action)
 
-            memory.append([state, action, reward, next_state, done, ep_step])
+            memory.append([state, action, reward, next_state, done])
 
             if len(memory) > size_replay_memory:
                 memory.popleft()
 
             if progress == "Training":
                 minibatch = ran.sample(memory, batch_size)
-                for states, actions, rewards, next_states, dones ,ep_steps in minibatch:
-                    
-                    q_value = sess.run(output, feed_dict={X: states, dropout: 1})
+                for state_b, action_b, reward_b, next_state_b, done_b in minibatch:
+                    q_value = sess.run(output, feed_dict={X: state_b, dropout: 1})
 
-                    if dones:
-                        if ep_steps < env.spec.timestep_limit :
-                            q_value[0, actions] = -100
+                    if done_b:
+                        q_value[0, action_b] = -100
                     else:
-                        next_states = np.reshape(next_states,[1,state_size])
-                        tgt_q_value_next = sess.run(output_tgt, feed_dict={X: next_states, dropout:1})
-                        q_value[0, actions] = rewards + discount_factor * np.max(tgt_q_value_next)
+                        next_state_b = np.reshape(next_state_b,[1,state_size])
+                        tgt_q_value_next = sess.run(output_tgt, feed_dict={X: next_state_b, dropout:1})
+                        q_value[0, action_b] = reward_b + discount_factor * np.max(tgt_q_value_next)
 
-                    _, loss = sess.run([train, Loss], feed_dict={X: states, Y: q_value, dropout:1})
+                    _, loss = sess.run([train, Loss], feed_dict={X: state_b, Y: q_value, dropout:1})
 
                 if epsilon > epsilon_min:
                     epsilon -= epsilon_decay
@@ -217,7 +216,7 @@ with tf.Session() as sess:
                     avg_score = np.mean(scores[-min(30, len(scores)):])
 
                 print("episode {:>5d} / score:{:>5d} / recent 30 game avg:{:>5.1f} / epsilon :{:>1.5f}"
-                          .format(episode, ep_step, avg_score, epsilon))            
+                          .format(episode, ep_step, avg_score, epsilon))
                 break
 
     save_path = saver.save(sess, model_path + "/model.ckpt")
