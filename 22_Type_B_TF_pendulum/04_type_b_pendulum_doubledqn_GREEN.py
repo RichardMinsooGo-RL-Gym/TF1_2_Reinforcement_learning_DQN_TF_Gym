@@ -40,7 +40,7 @@ hidden1 = 256
 target_update_cycle = 200
 
 memory = []
-size_replay_memory = 50000
+size_replay_memory = 5000
 batch_size = 64
 
 X = tf.placeholder(dtype=tf.float32, shape=(None, state_size), name="input_X")
@@ -122,26 +122,26 @@ with tf.Session() as sess:
             reward /= 10
             score += reward
 
-            memory.append([state, action, reward, next_state, done, ep_step])
+            memory.append([state, action, reward, next_state, done])
 
             if len(memory) > size_replay_memory:
                 memory.popleft()
 
             if progress == "Training":
-                minibatch = ran.sample(memory, batch_size)
-                for states, actions, rewards, next_states, dones ,ep_steps in minibatch:
+                for minibatch in ran.sample(memory, batch_size):
+
+                    state_b, action_b, reward_b, next_state_b, done_b = minibatch
                     
-                    q_value = sess.run(output, feed_dict={X: states, dropout: 1})
+                    q_value = sess.run(output, feed_dict={X: state_b, dropout: 1})
 
-                    if dones:
-                        if ep_steps < env.spec.timestep_limit :
-                            q_value[0, actions] = -100
+                    if done_b:
+                        q_value[0, action_b] = -100
                     else:
-                        next_states = np.reshape(next_states,[1,state_size])
-                        tgt_q_value_next, q_value_next = sess.run([output_tgt,output], feed_dict={X: next_states, dropout:1})
-                        q_value[0, actions] = rewards + discount_factor * tgt_q_value_next[0, np.argmax(q_value_next)]
+                        next_state_b = np.reshape(next_state_b,[1,state_size])
+                        tgt_q_value_next, q_value_next = sess.run([output_tgt,output], feed_dict={X: next_state_b, dropout:1})
+                        q_value[0, action_b] = reward_b + discount_factor * tgt_q_value_next[0, np.argmax(q_value_next)]
 
-                    _, loss = sess.run([train, Loss], feed_dict={X: states, Y: q_value, dropout:1})
+                    _, loss = sess.run([train, Loss], feed_dict={X: state_b, Y: q_value, dropout:1})
 
                 if epsilon > epsilon_min:
                     epsilon -= epsilon_decay
